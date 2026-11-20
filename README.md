@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pan-India Lost & Found AI Matching Platform
 
-## Getting Started
+A web portal where people report lost or found belongings. The system compares
+reports using AI and suggests likely matches, with a percentage score and the
+reasons behind it ("400 m away", "same colour", "1 day apart").
 
-First, run the development server:
+Course project for INT252, Lovely Professional University.
+Team: Astha Dixit, Hemal Nangru, Shubham Kumar.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+![Match results](docs/matches.png)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Features
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Report lost or found items with category, colour, city, date and a photo
+- Click a map to drop a pin (Leaflet and OpenStreetMap)
+- AI text matching with sentence embeddings and pgvector
+- Score breakdown that explains why two items match
+- Secure claim flow: the finder sets a hidden question, and the owner must
+  answer it before the finder's contact is shown
+- Email and password login, and a My reports page with status tracking
+- Browse page with filters for type, category and city
+- Demo data script and an accuracy test script
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## How matching works
 
-## Learn More
+1. Hard filters first: same category, status open, and found date on or after
+   the lost date.
+2. The title, description and colour are turned into a 384-number embedding
+   with `all-MiniLM-L6-v2`, run locally with Transformers.js.
+3. Candidates are ranked by cosine similarity using pgvector.
+4. The final score combines three signals:
 
-To learn more about Next.js, take a look at the following resources:
+   `score = 0.6 x text similarity + 0.2 x location + 0.2 x date closeness`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+   Location is 1 at the same spot and falls to 0 at 20 km (haversine
+   distance). If a report has no map pin, the same city counts instead.
+   Date closeness falls to 0 at 30 days apart.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Security
 
-## Deploy on Vercel
+- Row-level security: anyone can read items, but only logged-in users can
+  create them, and only as themselves. Only owners can update or delete.
+- Claim answers and contact details live in a separate locked table
+  (`item_secrets`) with no read policy. A database function checks the
+  answer and only then returns the contact, so secrets never reach the browser.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Evaluation
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Tested on 20 self-written lost/found pairs, where each pair describes the same
+item in different words. Each lost item was matched against all open found
+items in its category.
+
+| Method                     | Top-1 | Top-3 | Top-5 |
+|----------------------------|-------|-------|-------|
+| Text meaning only          | 100%  | 100%  | 100%  |
+| Combined (text+place+date) | 100%  | 100%  | 100%  |
+
+Tested on 21 lost items against all open found items in the same category.
+The pairs were written by us, and each category has only a few found items,
+so this is an easy benchmark. Both methods reach 100%, so this test cannot
+show whether location and date improve ranking. A harder test with more
+similar items per category, and real reports, is future work.
