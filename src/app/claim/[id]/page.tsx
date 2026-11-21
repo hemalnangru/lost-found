@@ -33,55 +33,69 @@ export default function ClaimPage() {
     setBusy(false);
     if (error) return setMessage(error.message);
     if (data) setContact(data as string);
-    else setMessage("That answer is not correct. Please try again.");
+    else setMessage("That answer isn't right. Check it and try again.");
   }
 
-  const input = "w-full border rounded p-2";
-
-  if (loadingQ || loggedIn === null) return <main className="p-6">Loading...</main>;
-
-  if (!loggedIn) {
-    return (
-      <main className="max-w-md mx-auto p-6">
-        <h1 className="text-2xl font-bold mb-2">Claim this item</h1>
-        <p className="mb-4">Please log in to claim an item.</p>
-        <Link href="/login" className="bg-blue-600 text-white rounded px-4 py-2">Log in</Link>
-      </main>
-    );
-  }
-
-  if (!question) {
-    return (
-      <main className="max-w-md mx-auto p-6">
-        <h1 className="text-2xl font-bold mb-2">Claim this item</h1>
-        <p>This item has no verification question, so it cannot be claimed here.</p>
-      </main>
-    );
+  if (loadingQ || loggedIn === null) {
+    return <main className="max-w-md mx-auto px-5 py-12">Loading...</main>;
   }
 
   return (
-    <main className="max-w-md mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-2">Claim this item</h1>
-
-      {contact ? (
-        <div className="border border-green-600 rounded p-4">
-          <p className="font-medium text-green-600 mb-1">Verified! Contact the finder:</p>
-          <p className="text-lg">{contact}</p>
+    <main className="max-w-md mx-auto px-5 py-12">
+      <div className="ticket">
+        <div className="ticket-band ticket-band-ink">
+          <span className="ticket-hole" aria-hidden="true" />
+          <span>Claim this item</span>
         </div>
-      ) : (
-        <form onSubmit={verify} className="space-y-3">
-          <p className="text-sm text-gray-500">
-            Only the real owner knows this. Answer correctly to see the finder&apos;s contact.
-          </p>
-          <p className="font-medium">{question}</p>
-          <input className={input} required placeholder="Your answer"
-            value={answer} onChange={(e) => setAnswer(e.target.value)} />
-          <button disabled={busy} className="bg-blue-600 text-white rounded px-4 py-2">
-            {busy ? "Checking..." : "Verify"}
-          </button>
-          {message && <p className="text-red-600 text-sm">{message}</p>}
-        </form>
-      )}
+
+        <div className="p-5">
+          {!loggedIn ? (
+            <>
+              <p className="mb-4 text-ink-soft">Log in to claim an item.</p>
+              <Link href="/login" className="btn btn-primary">
+                Log in
+              </Link>
+            </>
+          ) : !question ? (
+            <p className="text-ink-soft">
+              This item has no verification question, so it can&apos;t be claimed here.
+            </p>
+          ) : contact ? (
+            <div className="rounded-xl border-[1.5px] border-found bg-found-tint p-4">
+              <p className="font-bold text-found-dark">Verified. Contact the finder:</p>
+              <p className="mt-1 text-2xl font-display font-extrabold break-words">{contact}</p>
+            </div>
+          ) : (
+            <form onSubmit={verify} className="space-y-4">
+              <p className="text-sm text-ink-soft">
+                Only the real owner would know this. Answer correctly to see the finder&apos;s
+                contact details.
+              </p>
+              <p className="font-display font-bold text-xl leading-snug">{question}</p>
+              <div>
+                <label className="label" htmlFor="answer">
+                  Your answer
+                </label>
+                <input
+                  id="answer"
+                  className="field w-full"
+                  required
+                  value={answer}
+                  onChange={(e) => setAnswer(e.target.value)}
+                />
+              </div>
+              <button disabled={busy} className="btn btn-primary w-full">
+                {busy ? "Checking..." : "Verify answer"}
+              </button>
+              {message && (
+                <p role="alert" className="rounded-lg border border-lost bg-lost-tint px-3 py-2 text-sm text-lost-dark">
+                  {message}
+                </p>
+              )}
+            </form>
+          )}
+        </div>
+      </div>
     </main>
   );
 }

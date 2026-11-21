@@ -24,30 +24,66 @@ export default function LoginPage() {
     router.push("/report");
   }
 
-  const input = "w-full border rounded p-2";
+  const title = mode === "login" ? "Log in" : "Create account";
 
   return (
-    <main className="max-w-sm mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">
-        {mode === "login" ? "Log in" : "Create account"}
-      </h1>
-      <form onSubmit={submit} className="space-y-3">
-        <input className={input} type="email" placeholder="Email" required
-          value={email} onChange={(e) => setEmail(e.target.value)} />
-        <input className={input} type="password" placeholder="Password (min 6 characters)"
-          required minLength={6} value={password}
-          onChange={(e) => setPassword(e.target.value)} />
-        <button disabled={loading} className="w-full bg-blue-600 text-white rounded px-4 py-2">
-          {loading ? "Please wait..." : mode === "login" ? "Log in" : "Sign up"}
-        </button>
-      </form>
-      {error && <p className="text-red-600 mt-3 text-sm">{error}</p>}
-      <button
-        className="text-sm text-blue-600 mt-4 underline"
-        onClick={() => setMode(mode === "login" ? "signup" : "login")}
-      >
-        {mode === "login" ? "New here? Create an account" : "Already have an account? Log in"}
-      </button>
+    <main className="max-w-md mx-auto px-5 py-12">
+      <div className="ticket">
+        <div className="ticket-band ticket-band-ink">
+          <span className="ticket-hole" aria-hidden="true" />
+          <span>{title}</span>
+        </div>
+        <form onSubmit={submit} className="p-5 space-y-4">
+          <div>
+            <label className="label" htmlFor="email">
+              Email
+            </label>
+            <input
+              id="email"
+              className="field w-full"
+              type="email"
+              placeholder="name@example.com"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="label" htmlFor="password">
+              Password
+            </label>
+            <input
+              id="password"
+              className="field w-full"
+              type="password"
+              placeholder="At least 6 characters"
+              required
+              minLength={6}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+          <button disabled={loading} className="btn btn-primary w-full">
+            {loading ? "Please wait..." : title}
+          </button>
+          {error && (
+            <p role="alert" className="rounded-lg border border-lost bg-lost-tint px-3 py-2 text-sm text-lost-dark">
+              {error}
+            </p>
+          )}
+        </form>
+        <div className="ticket-perf mx-5" />
+        <div className="p-5 text-sm">
+          {mode === "login" ? "New here? " : "Already have an account? "}
+          <button
+            type="button"
+            className="font-semibold text-rail-dark underline"
+            onClick={() => setMode(mode === "login" ? "signup" : "login")}
+          >
+            {mode === "login" ? "Create an account" : "Log in"}
+          </button>
+        </div>
+      </div>
     </main>
   );
 }

@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { formatDate } from "@/lib/format";
+import TicketBand from "@/components/TicketBand";
 
 type Item = {
   id: string;
@@ -45,10 +47,7 @@ export default function MyReportsPage() {
     const next = STAGES[STAGES.indexOf(it.status) + 1];
     if (!next) return;
     setError("");
-    const { error } = await supabase
-      .from("items")
-      .update({ status: next })
-      .eq("id", it.id);
+    const { error } = await supabase.from("items").update({ status: next }).eq("id", it.id);
     if (error) return setError(error.message);
     setItems(items.map((x) => (x.id === it.id ? { ...x, status: next } : x)));
   }
@@ -61,14 +60,14 @@ export default function MyReportsPage() {
     setItems(items.filter((x) => x.id !== it.id));
   }
 
-  if (loading) return <main className="p-6">Loading...</main>;
+  if (loading) return <main className="max-w-3xl mx-auto px-5 py-8">Loading your reports...</main>;
 
   if (!loggedIn) {
     return (
-      <main className="max-w-2xl mx-auto p-6">
-        <h1 className="text-2xl font-bold mb-2">My reports</h1>
-        <p className="mb-4">Log in to see your reports.</p>
-        <Link href="/login" className="bg-blue-600 text-white rounded px-4 py-2">
+      <main className="max-w-3xl mx-auto px-5 py-8">
+        <h1 className="font-display font-extrabold text-3xl mb-2">My reports</h1>
+        <p className="mb-4 text-ink-soft">Log in to see your reports.</p>
+        <Link href="/login" className="btn btn-primary">
           Log in
         </Link>
       </main>
@@ -76,77 +75,102 @@ export default function MyReportsPage() {
   }
 
   return (
-    <main className="max-w-2xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">My reports</h1>
-      {error && <p className="text-red-600 mb-3 text-sm">{error}</p>}
-      {items.length === 0 && (
-        <p>
-          You have no reports yet.{" "}
-          <Link href="/report" className="text-blue-600 underline">
-            Report an item
-          </Link>
+    <main className="max-w-3xl mx-auto px-5 py-8">
+      <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
+        <h1 className="font-display font-extrabold text-3xl">My reports</h1>
+        <Link href="/report" className="btn btn-primary">
+          Report an item
+        </Link>
+      </div>
+
+      {error && (
+        <p role="alert" className="mb-4 rounded-lg border border-lost bg-lost-tint px-3 py-2 text-sm text-lost-dark">
+          {error}
         </p>
       )}
 
-      <div className="space-y-3">
+      {items.length === 0 && (
+        <div className="panel">
+          <p className="font-semibold">You haven&apos;t reported anything yet.</p>
+          <p className="text-ink-soft">
+            Lost or found something?{" "}
+            <Link href="/report" className="text-rail-dark underline">
+              Report an item
+            </Link>
+            .
+          </p>
+        </div>
+      )}
+
+      <div className="space-y-5">
         {items.map((it) => {
           const current = STAGES.indexOf(it.status);
           const next = STAGES[current + 1];
           return (
-            <div key={it.id} className="border rounded-lg p-4">
-              <div className="flex gap-3">
+            <article key={it.id} className="ticket">
+              <TicketBand type={it.type} id={it.id} />
+              <div className="p-4 flex gap-4">
                 {it.image_url && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={it.image_url} alt={it.title}
-                    className="h-16 w-16 rounded object-cover shrink-0" />
+                  <img
+                    src={it.image_url}
+                    alt={it.title}
+                    className="h-16 w-16 rounded-lg object-cover border-[1.5px] border-ink shrink-0"
+                  />
                 )}
-                <div className="flex-1">
-                  <div className="flex justify-between items-start gap-2">
-                    <p className="font-medium">{it.title}</p>
-                    <span className={`text-xs px-2 py-1 rounded ${
-                      it.type === "lost"
-                        ? "bg-red-100 text-red-700"
-                        : "bg-green-100 text-green-700"
-                    }`}>
-                      {it.type}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-500">
-                    {it.category} | {it.city ?? "Unknown city"} | {it.event_date}
+                <div>
+                  <h2 className="font-display font-bold text-lg leading-snug">{it.title}</h2>
+                  <p className="text-sm text-ink-soft">
+                    {it.category}, {it.city ?? "Unknown city"}, {formatDate(it.event_date)}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1 mt-3 flex-wrap">
-                {STAGES.map((s, i) => (
-                  <span key={s} className="flex items-center gap-1">
-                    <span className={`text-xs px-2 py-1 rounded ${
-                      i <= current
-                        ? "bg-blue-100 text-blue-700 font-medium"
-                        : "bg-gray-100 text-gray-500"
-                    }`}>
-                      {s}
-                    </span>
-                    {i < STAGES.length - 1 && (
-                      <span className="text-gray-400 text-xs">→</span>
-                    )}
-                  </span>
-                ))}
-              </div>
+              <div className="ticket-perf mx-4" />
 
-              <div className="flex gap-3 mt-3 text-sm">
-                {next && (
-                  <button onClick={() => advance(it)}
-                    className="bg-blue-600 text-white rounded px-3 py-1">
-                    Mark as {next}
+              <div className="p-4">
+                <ol className="flex items-start" aria-label="Status">
+                  {STAGES.map((s, i) => (
+                    <li key={s} className="flex items-start flex-1 last:flex-none">
+                      <span className="flex flex-col items-center gap-1">
+                        <span
+                          className={`grid place-items-center h-6 w-6 rounded-full border-[1.5px] border-ink text-xs font-bold ${
+                            i <= current ? "bg-ink text-white" : "bg-card text-ink-soft"
+                          }`}
+                        >
+                          {i < current ? "✓" : i + 1}
+                        </span>
+                        <span
+                          className={`text-xs capitalize ${
+                            i === current ? "font-bold" : "text-ink-soft"
+                          }`}
+                        >
+                          {s}
+                        </span>
+                      </span>
+                      {i < STAGES.length - 1 && (
+                        <span
+                          className={`h-[2px] flex-1 mx-2 mt-[11px] ${
+                            i < current ? "bg-ink" : "bg-line-strong"
+                          }`}
+                        />
+                      )}
+                    </li>
+                  ))}
+                </ol>
+
+                <div className="flex flex-wrap gap-3 mt-4">
+                  {next && (
+                    <button onClick={() => advance(it)} className="btn btn-primary btn-small">
+                      Mark as {next}
+                    </button>
+                  )}
+                  <button onClick={() => remove(it)} className="btn btn-danger btn-small">
+                    Delete
                   </button>
-                )}
-                <button onClick={() => remove(it)}
-                  className="text-red-600 underline">
-                  Delete
-                </button>
+                </div>
               </div>
-            </div>
+            </article>
           );
         })}
       </div>
