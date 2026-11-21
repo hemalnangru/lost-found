@@ -50,10 +50,12 @@ Tested on 20 self-written lost/found pairs, where each pair describes the same
 item in different words. Each lost item was matched against all open found
 items in its category.
 
-| Method                     | Top-1 | Top-3 | Top-5 |
-|----------------------------|-------|-------|-------|
-| Text meaning only          | 100%  | 100%  | 100%  |
-| Combined (text+place+date) | 100%  | 100%  | 100%  |
+| Test set                                   | Method   | Top-1 | Top-3 | Top-5 |
+|--------------------------------------------|----------|-------|-------|-------|
+| Easy (21 pairs, few found items)           | Text     | 100%  | 100%  | 100%  |
+| Easy                                       | Combined | 100%  | 100%  | 100%  |
+| Hard (adds 63 look-alike found items)      | Text     | XX%   | XX%   | XX%   |
+| Hard                                       | Combined | XX%   | XX%   | XX%   |
 
 Tested on 21 lost items against all open found items in the same category.
 The pairs were written by us, and each category has only a few found items,
