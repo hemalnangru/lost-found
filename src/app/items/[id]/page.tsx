@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { supabase } from "@/lib/supabase";
@@ -15,6 +15,7 @@ const MapView = dynamic(() => import("@/components/MapView"), {
 
 type Item = {
   id: string;
+  user_id: string | null;
   type: string;
   title: string;
   description: string | null;
@@ -30,14 +31,19 @@ type Item = {
 
 export default function ItemDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
+  const [me, setMe] = useState<string | null>(null);
+  const [chatBusy, setChatBusy] = useState(false);
+  const [chatError, setChatError] = useState("");
   const [item, setItem] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setMe(data.session?.user.id ?? null));
     supabase
       .from("items")
-      .select("id,type,title,description,category,color,city,lat,lng,event_date,status,image_url")
+      .select("id,user_id,type,title,description,category,color,city,lat,lng,event_date,status,image_url")
       .eq("id", id)
       .maybeSingle()
       .then(({ data }) => {
@@ -53,6 +59,15 @@ export default function ItemDetailPage() {
         : [],
     [item]
   );
+
+  async function startChat() {
+    setChatBusy(true);
+    setChatError("");
+    const { data, error } = await supabase.rpc("start_conversation", { p_item: id });
+    setChatBusy(false);
+    if (error) return setChatError(error.message);
+    router.push(`/messages/${data as string}`);
+  }
 
   async function copyLink() {
     try {
@@ -118,10 +133,29 @@ export default function ItemDetailPage() {
                 Claim this item
               </Link>
             )}
+            {me && item.user_id && item.user_id !== me && (
+              <button type="button" onClick={startChat} disabled={chatBusy} className="btn">
+                {chatBusy
+                  ? "Opening chat..."
+                  : item.type === "found"
+                  ? "Message the finder"
+                  : "Message the owner"}
+              </button>
+            )}
+            {!me && (
+              <Link href="/login" className="btn">
+                Log in to send a message
+              </Link>
+            )}
             <button type="button" onClick={copyLink} className="btn">
               {copied ? "Link copied" : "Copy link"}
             </button>
           </div>
+          {chatError && (
+            <p role="alert" className="mx-5 mb-5 rounded-lg border border-lost bg-lost-tint px-3 py-2 text-sm text-lost-dark">
+              {chatError}
+            </p>
+          )}
         </article>
 
         <aside className="space-y-4">

@@ -43,3 +43,5 @@ next-env.d.ts
 backup-before-redesign/
 
 backup-before-upgrades/
+
+backup-before-chat/

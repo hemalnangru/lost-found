@@ -21,7 +21,12 @@ export default function Navbar() {
   const links = [
     { href: "/report", label: "Report" },
     { href: "/items", label: "Browse" },
-    ...(email ? [{ href: "/my-reports", label: "My reports" }] : []),
+    ...(email
+      ? [
+          { href: "/my-reports", label: "My reports" },
+          { href: "/messages", label: "Messages" },
+        ]
+      : []),
   ];
 
   return (
