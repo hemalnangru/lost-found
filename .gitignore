@@ -47,3 +47,5 @@ backup-before-upgrades/
 backup-before-chat/
 
 backup-before-email/
+
+backup-before-admin/

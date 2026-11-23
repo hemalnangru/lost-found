@@ -7,13 +7,20 @@ import { supabase } from "@/lib/supabase";
 export default function Navbar() {
   const pathname = usePathname();
   const [email, setEmail] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
+    function checkAdmin(loggedIn: boolean) {
+      if (!loggedIn) return setIsAdmin(false);
+      supabase.rpc("is_admin").then(({ data }) => setIsAdmin(data === true));
+    }
     supabase.auth.getSession().then(({ data }) => {
       setEmail(data.session?.user.email ?? null);
+      checkAdmin(!!data.session);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
       setEmail(session?.user.email ?? null);
+      checkAdmin(!!session);
     });
     return () => sub.subscription.unsubscribe();
   }, []);
@@ -27,6 +34,7 @@ export default function Navbar() {
           { href: "/messages", label: "Messages" },
         ]
       : []),
+    ...(isAdmin ? [{ href: "/admin", label: "Admin" }] : []),
   ];
 
   return (
