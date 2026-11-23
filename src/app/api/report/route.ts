@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { pipeline } from "@huggingface/transformers";
+import { notifyMatches } from "@/lib/alerts";
 
 type Extractor = (
   text: string,
@@ -209,6 +210,22 @@ export async function POST(req: Request) {
       .map((c) => scoreMatch(c, { city, color, lat, lng, event_date }))
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
+
+    // Email the owners of strongly matching reports. This runs after the response
+    // is sent, so a slow or failing email never delays or breaks the report.
+    const origin = new URL(req.url).origin;
+    after(async () => {
+      try {
+        await notifyMatches({
+          item: { id: item.id, type, title, city, event_date },
+          matches,
+          submitterId: user_id,
+          origin,
+        });
+      } catch (e) {
+        console.error("[alerts]", e);
+      }
+    });
 
     return NextResponse.json({ item, matches });
   } catch (e) {
