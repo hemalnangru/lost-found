@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { formatDate } from "@/lib/format";
+import { useT } from "@/lib/i18n";
 import TicketBand from "@/components/TicketBand";
 
 type Item = {
@@ -19,6 +20,7 @@ type Item = {
 const STAGES = ["open", "matched", "claimed", "returned"];
 
 export default function MyReportsPage() {
+  const { t, td, lang } = useT();
   const [items, setItems] = useState<Item[]>([]);
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,23 +55,21 @@ export default function MyReportsPage() {
   }
 
   async function remove(it: Item) {
-    if (!window.confirm(`Delete "${it.title}"?`)) return;
+    if (!window.confirm(t("mine.confirmDelete", { title: it.title }))) return;
     setError("");
     const { error } = await supabase.from("items").delete().eq("id", it.id);
     if (error) return setError(error.message);
     setItems(items.filter((x) => x.id !== it.id));
   }
 
-  if (loading) return <main className="max-w-3xl mx-auto px-5 py-8">Loading your reports...</main>;
+  if (loading) return <main className="max-w-3xl mx-auto px-5 py-8">{t("mine.loading")}</main>;
 
   if (!loggedIn) {
     return (
       <main className="max-w-3xl mx-auto px-5 py-8">
-        <h1 className="font-display font-extrabold text-3xl mb-2">My reports</h1>
-        <p className="mb-4 text-ink-soft">Log in to see your reports.</p>
-        <Link href="/login" className="btn btn-primary">
-          Log in
-        </Link>
+        <h1 className="font-display font-extrabold text-3xl mb-2">{t("mine.title")}</h1>
+        <p className="mb-4 text-ink-soft">{t("mine.loginPrompt")}</p>
+        <Link href="/login" className="btn btn-primary">{t("nav.login")}</Link>
       </main>
     );
   }
@@ -77,10 +77,8 @@ export default function MyReportsPage() {
   return (
     <main className="max-w-3xl mx-auto px-5 py-8">
       <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
-        <h1 className="font-display font-extrabold text-3xl">My reports</h1>
-        <Link href="/report" className="btn btn-primary">
-          Report an item
-        </Link>
+        <h1 className="font-display font-extrabold text-3xl">{t("mine.title")}</h1>
+        <Link href="/report" className="btn btn-primary">{t("common.reportItem")}</Link>
       </div>
 
       {error && (
@@ -91,13 +89,10 @@ export default function MyReportsPage() {
 
       {items.length === 0 && (
         <div className="panel">
-          <p className="font-semibold">You haven&apos;t reported anything yet.</p>
+          <p className="font-semibold">{t("mine.none")}</p>
           <p className="text-ink-soft">
-            Lost or found something?{" "}
-            <Link href="/report" className="text-rail-dark underline">
-              Report an item
-            </Link>
-            .
+            {t("mine.noneText")}
+            <Link href="/report" className="text-rail-dark underline">{t("common.reportItem")}</Link>.
           </p>
         </div>
       )}
@@ -112,16 +107,14 @@ export default function MyReportsPage() {
               <div className="p-4 flex gap-4">
                 {it.image_url && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={it.image_url}
-                    alt={it.title}
-                    className="h-16 w-16 rounded-lg object-cover border-[1.5px] border-ink shrink-0"
-                  />
+                  <img src={it.image_url} alt={it.title}
+                    className="h-16 w-16 rounded-lg object-cover border-[1.5px] border-ink shrink-0" />
                 )}
                 <div>
                   <h2 className="font-display font-bold text-lg leading-snug">{it.title}</h2>
                   <p className="text-sm text-ink-soft">
-                    {it.category}, {it.city ?? "Unknown city"}, {formatDate(it.event_date)}
+                    {td(`cat.${it.category}`, it.category)}, {it.city ?? t("common.unknownCity")},{" "}
+                    {formatDate(it.event_date, lang)}
                   </p>
                 </div>
               </div>
@@ -129,31 +122,23 @@ export default function MyReportsPage() {
               <div className="ticket-perf mx-4" />
 
               <div className="p-4">
-                <ol className="flex items-start" aria-label="Status">
+                <ol className="flex items-start" aria-label={t("mine.statusAria")}>
                   {STAGES.map((s, i) => (
                     <li key={s} className="flex items-start flex-1 last:flex-none">
                       <span className="flex flex-col items-center gap-1">
-                        <span
-                          className={`grid place-items-center h-6 w-6 rounded-full border-[1.5px] border-ink text-xs font-bold ${
-                            i <= current ? "bg-ink text-white" : "bg-card text-ink-soft"
-                          }`}
-                        >
+                        <span className={`grid place-items-center h-6 w-6 rounded-full border-[1.5px] border-ink text-xs font-bold ${
+                          i <= current ? "bg-ink text-white" : "bg-card text-ink-soft"
+                        }`}>
                           {i < current ? "✓" : i + 1}
                         </span>
-                        <span
-                          className={`text-xs capitalize ${
-                            i === current ? "font-bold" : "text-ink-soft"
-                          }`}
-                        >
-                          {s}
+                        <span className={`text-xs ${i === current ? "font-bold" : "text-ink-soft"}`}>
+                          {td(`status.${s}`, s)}
                         </span>
                       </span>
                       {i < STAGES.length - 1 && (
-                        <span
-                          className={`h-[2px] flex-1 mx-2 mt-[11px] ${
-                            i < current ? "bg-ink" : "bg-line-strong"
-                          }`}
-                        />
+                        <span className={`h-[2px] flex-1 mx-2 mt-[11px] ${
+                          i < current ? "bg-ink" : "bg-line-strong"
+                        }`} />
                       )}
                     </li>
                   ))}
@@ -162,11 +147,11 @@ export default function MyReportsPage() {
                 <div className="flex flex-wrap gap-3 mt-4">
                   {next && (
                     <button onClick={() => advance(it)} className="btn btn-primary btn-small">
-                      Mark as {next}
+                      {t("mine.markAs", { status: td(`status.${next}`, next) })}
                     </button>
                   )}
                   <button onClick={() => remove(it)} className="btn btn-danger btn-small">
-                    Delete
+                    {t("mine.delete")}
                   </button>
                 </div>
               </div>

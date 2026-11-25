@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import { Archivo, Figtree } from "next/font/google";
+import { Archivo, Figtree, Noto_Sans_Devanagari } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 
 const archivo = Archivo({
   variable: "--font-archivo",
@@ -11,6 +12,12 @@ const archivo = Archivo({
 const figtree = Figtree({
   variable: "--font-figtree",
   subsets: ["latin"],
+});
+
+// Hindi letters. The browser uses it only for characters the other fonts lack.
+const deva = Noto_Sans_Devanagari({
+  variable: "--font-deva",
+  subsets: ["devanagari"],
 });
 
 export const metadata: Metadata = {
@@ -27,16 +34,14 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${archivo.variable} ${figtree.variable} h-full antialiased`}>
+    <html
+      lang="en"
+      className={`${archivo.variable} ${figtree.variable} ${deva.variable} h-full antialiased`}
+    >
       <body className="min-h-full flex flex-col">
         <Navbar />
         {children}
-        <footer className="mt-auto border-t border-line py-6 text-sm text-ink-soft">
-          <div className="max-w-6xl mx-auto px-5">
-            Built by Astha Dixit, Hemal Nangru and Shubham Kumar for INT252, Lovely
-            Professional University.
-          </div>
-        </footer>
+        <Footer />
       </body>
     </html>
   );

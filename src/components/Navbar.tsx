@@ -3,11 +3,18 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { useT } from "@/lib/i18n";
+import LanguageSwitch from "@/components/LanguageSwitch";
 
 export default function Navbar() {
   const pathname = usePathname();
+  const { t, lang } = useT();
   const [email, setEmail] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
 
   useEffect(() => {
     function checkAdmin(loggedIn: boolean) {
@@ -26,15 +33,15 @@ export default function Navbar() {
   }, []);
 
   const links = [
-    { href: "/report", label: "Report" },
-    { href: "/items", label: "Browse" },
+    { href: "/report", label: t("nav.report") },
+    { href: "/items", label: t("nav.browse") },
     ...(email
       ? [
-          { href: "/my-reports", label: "My reports" },
-          { href: "/messages", label: "Messages" },
+          { href: "/my-reports", label: t("nav.myReports") },
+          { href: "/messages", label: t("nav.messages") },
         ]
       : []),
-    ...(isAdmin ? [{ href: "/admin", label: "Admin" }] : []),
+    ...(isAdmin ? [{ href: "/admin", label: t("nav.admin") }] : []),
   ];
 
   return (
@@ -51,7 +58,7 @@ export default function Navbar() {
             />
             <circle cx="9" cy="12" r="1.8" fill="#fff" stroke="#0e1a3a" strokeWidth="1.5" />
           </svg>
-          Pan-India Lost &amp; Found
+          {t("brand")}
         </Link>
 
         <div className="flex items-center gap-5 text-[0.95rem] font-semibold">
@@ -72,16 +79,17 @@ export default function Navbar() {
         </div>
 
         <div className="ml-auto flex items-center gap-3 text-sm">
+          <LanguageSwitch />
           {email ? (
             <>
-              <span className="hidden sm:inline text-ink-soft">{email}</span>
+              <span className="hidden lg:inline text-ink-soft">{email}</span>
               <button className="btn btn-small" onClick={() => supabase.auth.signOut()}>
-                Log out
+                {t("nav.logout")}
               </button>
             </>
           ) : (
             <Link href="/login" className="btn btn-small btn-primary">
-              Log in
+              {t("nav.login")}
             </Link>
           )}
         </div>

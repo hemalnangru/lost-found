@@ -3,6 +3,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { formatTime } from "@/lib/format";
+import { useT } from "@/lib/i18n";
 
 type Msg = {
   id: string;
@@ -26,10 +28,8 @@ function merge(prev: Msg[], incoming: Msg[]) {
   return [...map.values()].sort((a, b) => a.created_at.localeCompare(b.created_at));
 }
 
-const time = (iso: string) =>
-  new Date(iso).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
-
 export default function ChatPage() {
+  const { t, lang } = useT();
   const { id } = useParams<{ id: string }>();
   const [me, setMe] = useState<string | null>(null);
   const [conv, setConv] = useState<Conv | null>(null);
@@ -73,12 +73,7 @@ export default function ChatPage() {
       .channel(`chat-${id}`)
       .on(
         "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-          filter: `conversation_id=eq.${id}`,
-        },
+        { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${id}` },
         (payload) => setMessages((prev) => merge(prev, [payload.new as Msg]))
       )
       .subscribe();
@@ -111,16 +106,14 @@ export default function ChatPage() {
     setText("");
   }
 
-  if (loading) return <main className="max-w-2xl mx-auto px-5 py-8">Loading chat...</main>;
+  if (loading) return <main className="max-w-2xl mx-auto px-5 py-8">{t("chat.loading")}</main>;
 
   if (!me) {
     return (
       <main className="max-w-2xl mx-auto px-5 py-8">
-        <h1 className="font-display font-extrabold text-3xl mb-2">Messages</h1>
-        <p className="mb-4 text-ink-soft">Log in to read your messages.</p>
-        <Link href="/login" className="btn btn-primary">
-          Log in
-        </Link>
+        <h1 className="font-display font-extrabold text-3xl mb-2">{t("msg.title")}</h1>
+        <p className="mb-4 text-ink-soft">{t("chat.loginPrompt")}</p>
+        <Link href="/login" className="btn btn-primary">{t("nav.login")}</Link>
       </main>
     );
   }
@@ -128,28 +121,24 @@ export default function ChatPage() {
   if (!conv) {
     return (
       <main className="max-w-2xl mx-auto px-5 py-8">
-        <h1 className="font-display font-extrabold text-3xl mb-2">Chat not found</h1>
-        <p className="mb-4 text-ink-soft">
-          This chat doesn&apos;t exist, or it belongs to other people.
-        </p>
-        <Link href="/messages" className="btn btn-primary">
-          Back to messages
-        </Link>
+        <h1 className="font-display font-extrabold text-3xl mb-2">{t("chat.notFound")}</h1>
+        <p className="mb-4 text-ink-soft">{t("chat.notFoundText")}</p>
+        <Link href="/messages" className="btn btn-primary">{t("chat.back")}</Link>
       </main>
     );
   }
 
   const otherLabel =
     me === conv.owner_id
-      ? "Someone interested in this item"
+      ? t("msg.someone")
       : conv.items?.type === "found"
-      ? "The finder"
-      : "The owner";
+      ? t("msg.finder")
+      : t("msg.owner");
 
   return (
     <main className="max-w-2xl mx-auto px-5 py-8">
       <Link href="/messages" className="text-sm text-rail-dark underline">
-        Back to messages
+        {t("chat.back")}
       </Link>
 
       <div className="ticket mt-4">
@@ -158,31 +147,27 @@ export default function ChatPage() {
           <span>{otherLabel}</span>
         </div>
         <div className="px-4 py-3 text-sm border-b-[1.5px] border-ink">
-          About{" "}
+          {t("chat.about")}
           <Link href={`/items/${conv.item_id}`} className="font-semibold text-rail-dark underline">
-            {conv.items?.title ?? "this report"}
+            {conv.items?.title ?? t("chat.thisReport")}
           </Link>
-          . Keep your phone number private until you are sure it is the right item.
+          . {t("chat.privacy")}
         </div>
 
         <div ref={boxRef} className="h-[26rem] overflow-y-auto bg-paper p-4 space-y-3" aria-live="polite">
           {messages.length === 0 && (
-            <p className="text-center text-sm text-ink-soft pt-10">
-              No messages yet. Say hello and describe the item.
-            </p>
+            <p className="text-center text-sm text-ink-soft pt-10">{t("chat.empty")}</p>
           )}
           {messages.map((m) => {
             const mine = m.sender_id === me;
             return (
               <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-                <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-2 border-[1.5px] border-ink ${
-                    mine ? "bg-rail text-white" : "bg-card"
-                  }`}
-                >
+                <div className={`max-w-[80%] rounded-2xl px-4 py-2 border-[1.5px] border-ink ${
+                  mine ? "bg-rail text-white" : "bg-card"
+                }`}>
                   <p className="whitespace-pre-wrap break-words">{m.body}</p>
                   <p className={`mt-1 text-xs ${mine ? "text-white/80" : "text-ink-soft"}`}>
-                    {time(m.created_at)}
+                    {formatTime(m.created_at, lang)}
                   </p>
                 </div>
               </div>
@@ -191,16 +176,11 @@ export default function ChatPage() {
         </div>
 
         <form onSubmit={send} className="flex gap-2 p-3 border-t-[1.5px] border-ink bg-card">
-          <input
-            className="field flex-1"
-            aria-label="Message"
-            placeholder="Write a message"
-            maxLength={1000}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-          />
+          <input className="field flex-1" aria-label={t("chat.aria")}
+            placeholder={t("chat.placeholder")} maxLength={1000} value={text}
+            onChange={(e) => setText(e.target.value)} />
           <button disabled={sending || !text.trim()} className="btn btn-primary">
-            {sending ? "Sending..." : "Send"}
+            {sending ? t("chat.sending") : t("chat.send")}
           </button>
         </form>
       </div>

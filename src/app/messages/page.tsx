@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { formatTime } from "@/lib/format";
+import { useT } from "@/lib/i18n";
 
 type Conv = {
   id: string;
@@ -14,15 +16,8 @@ type Conv = {
 
 type Last = { body: string; created_at: string; sender_id: string };
 
-function when(iso: string) {
-  const d = new Date(iso);
-  const today = new Date();
-  return d.toDateString() === today.toDateString()
-    ? d.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })
-    : d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
-}
-
 export default function MessagesPage() {
+  const { t, lang } = useT();
   const [me, setMe] = useState<string | null>(null);
   const [convs, setConvs] = useState<Conv[]>([]);
   const [last, setLast] = useState<Record<string, Last>>({});
@@ -69,26 +64,29 @@ export default function MessagesPage() {
     load();
   }, []);
 
-  if (loading) return <main className="max-w-2xl mx-auto px-5 py-8">Loading messages...</main>;
+  function when(iso: string) {
+    const d = new Date(iso);
+    return d.toDateString() === new Date().toDateString()
+      ? formatTime(iso, lang)
+      : d.toLocaleDateString(lang === "hi" ? "hi-IN" : "en-IN", { day: "numeric", month: "short" });
+  }
+
+  if (loading) return <main className="max-w-2xl mx-auto px-5 py-8">{t("msg.loading")}</main>;
 
   if (!me) {
     return (
       <main className="max-w-2xl mx-auto px-5 py-8">
-        <h1 className="font-display font-extrabold text-3xl mb-2">Messages</h1>
-        <p className="mb-4 text-ink-soft">Log in to see your messages.</p>
-        <Link href="/login" className="btn btn-primary">
-          Log in
-        </Link>
+        <h1 className="font-display font-extrabold text-3xl mb-2">{t("msg.title")}</h1>
+        <p className="mb-4 text-ink-soft">{t("msg.loginPrompt")}</p>
+        <Link href="/login" className="btn btn-primary">{t("nav.login")}</Link>
       </main>
     );
   }
 
   return (
     <main className="max-w-2xl mx-auto px-5 py-8">
-      <h1 className="font-display font-extrabold text-3xl">Messages</h1>
-      <p className="text-ink-soft mt-1 mb-6">
-        Chat with the owner or finder without sharing your phone number.
-      </p>
+      <h1 className="font-display font-extrabold text-3xl">{t("msg.title")}</h1>
+      <p className="text-ink-soft mt-1 mb-6">{t("msg.sub")}</p>
 
       {error && (
         <p role="alert" className="mb-4 rounded-lg border border-lost bg-lost-tint px-3 py-2 text-sm text-lost-dark">
@@ -98,13 +96,10 @@ export default function MessagesPage() {
 
       {convs.length === 0 && !error && (
         <div className="panel">
-          <p className="font-semibold">No conversations yet.</p>
+          <p className="font-semibold">{t("msg.none")}</p>
           <p className="text-ink-soft">
-            Open a report and choose{" "}
-            <Link href="/items" className="text-rail-dark underline">
-              Message the finder or Message the owner
-            </Link>
-            .
+            {t("msg.noneText")}
+            <Link href="/items" className="text-rail-dark underline">{t("msg.noneLink")}</Link>.
           </p>
         </div>
       )}
@@ -114,16 +109,16 @@ export default function MessagesPage() {
           const l = last[c.id];
           const who =
             me === c.owner_id
-              ? "Someone interested in this item"
+              ? t("msg.someone")
               : c.items?.type === "found"
-              ? "The finder"
-              : "The owner";
+              ? t("msg.finder")
+              : t("msg.owner");
           return (
             <Link key={c.id} href={`/messages/${c.id}`} className="ticket block hover:bg-rail-tint">
               <div className="px-4 py-3">
                 <div className="flex items-baseline justify-between gap-3">
                   <p className="font-display font-bold text-lg leading-snug">
-                    {c.items?.title ?? "Report"}
+                    {c.items?.title ?? t("common.report")}
                   </p>
                   <span className="text-xs text-ink-soft shrink-0">
                     {when(l?.created_at ?? c.created_at)}
@@ -131,7 +126,7 @@ export default function MessagesPage() {
                 </div>
                 <p className="text-sm text-ink-soft">{who}</p>
                 <p className="mt-1 text-sm truncate">
-                  {l ? `${l.sender_id === me ? "You: " : ""}${l.body}` : "No messages yet"}
+                  {l ? `${l.sender_id === me ? t("msg.you") : ""}${l.body}` : t("msg.noMsgs")}
                 </p>
               </div>
             </Link>

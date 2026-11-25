@@ -5,12 +5,14 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { supabase } from "@/lib/supabase";
 import { formatDate } from "@/lib/format";
+import { useT } from "@/lib/i18n";
 import TicketBand from "@/components/TicketBand";
+import MapLoading from "@/components/MapLoading";
 import type { MapPoint } from "@/components/MapView";
 
 const MapView = dynamic(() => import("@/components/MapView"), {
   ssr: false,
-  loading: () => <p className="p-4 text-sm text-ink-soft">Loading map...</p>,
+  loading: () => <MapLoading />,
 });
 
 type Item = {
@@ -30,6 +32,7 @@ type Item = {
 };
 
 export default function ItemDetailPage() {
+  const { t, td, lang } = useT();
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [me, setMe] = useState<string | null>(null);
@@ -79,32 +82,32 @@ export default function ItemDetailPage() {
     }
   }
 
-  if (loading) return <main className="max-w-4xl mx-auto px-5 py-8">Loading report...</main>;
+  if (loading) return <main className="max-w-4xl mx-auto px-5 py-8">{t("detail.loading")}</main>;
 
   if (!item) {
     return (
       <main className="max-w-4xl mx-auto px-5 py-8">
-        <h1 className="font-display font-extrabold text-3xl mb-2">Report not found</h1>
-        <p className="mb-4 text-ink-soft">This report doesn&apos;t exist or was removed.</p>
+        <h1 className="font-display font-extrabold text-3xl mb-2">{t("detail.notFound")}</h1>
+        <p className="mb-4 text-ink-soft">{t("detail.notFoundText")}</p>
         <Link href="/items" className="btn btn-primary">
-          Browse reports
+          {t("detail.browse")}
         </Link>
       </main>
     );
   }
 
   const rows: [string, string][] = [
-    ["Category", item.category],
-    ["Colour", item.color || "Not given"],
-    ["City", item.city || "Not given"],
-    [item.type === "lost" ? "Lost on" : "Found on", formatDate(item.event_date)],
-    ["Status", item.status],
+    [t("detail.category"), td(`cat.${item.category}`, item.category)],
+    [t("detail.colour"), item.color || t("detail.notGiven")],
+    [t("detail.city"), item.city || t("detail.notGiven")],
+    [item.type === "lost" ? t("detail.lostOn") : t("detail.foundOn"), formatDate(item.event_date, lang)],
+    [t("detail.status"), td(`status.${item.status}`, item.status)],
   ];
 
   return (
     <main className="max-w-4xl mx-auto px-5 py-8">
       <Link href="/items" className="text-sm text-rail-dark underline">
-        Back to all reports
+        {t("detail.back")}
       </Link>
 
       <div className="mt-4 grid gap-6 md:grid-cols-[1.2fr_1fr] items-start">
@@ -119,7 +122,7 @@ export default function ItemDetailPage() {
             />
           ) : (
             <div className="h-40 grid place-items-center bg-paper text-ink-soft border-b-[1.5px] border-ink">
-              No photo added
+              {t("common.noPhoto")}
             </div>
           )}
           <div className="p-5">
@@ -130,25 +133,25 @@ export default function ItemDetailPage() {
           <div className="p-5 flex flex-wrap gap-3">
             {item.type === "found" && (
               <Link href={`/claim/${item.id}`} className="btn btn-primary">
-                Claim this item
+                {t("detail.claim")}
               </Link>
             )}
             {me && item.user_id && item.user_id !== me && (
               <button type="button" onClick={startChat} disabled={chatBusy} className="btn">
                 {chatBusy
-                  ? "Opening chat..."
+                  ? t("detail.opening")
                   : item.type === "found"
-                  ? "Message the finder"
-                  : "Message the owner"}
+                  ? t("detail.msgFinder")
+                  : t("detail.msgOwner")}
               </button>
             )}
             {!me && (
               <Link href="/login" className="btn">
-                Log in to send a message
+                {t("detail.loginToMsg")}
               </Link>
             )}
             <button type="button" onClick={copyLink} className="btn">
-              {copied ? "Link copied" : "Copy link"}
+              {copied ? t("detail.copied") : t("detail.copy")}
             </button>
           </div>
           {chatError && (
@@ -160,7 +163,7 @@ export default function ItemDetailPage() {
 
         <aside className="space-y-4">
           <div className="panel">
-            <h2 className="font-display font-bold text-xl mb-3">Details</h2>
+            <h2 className="font-display font-bold text-xl mb-3">{t("detail.details")}</h2>
             <dl className="space-y-2 text-sm">
               {rows.map(([k, v]) => (
                 <div key={k} className="flex justify-between gap-4 border-b border-line pb-2 last:border-0">
@@ -176,7 +179,7 @@ export default function ItemDetailPage() {
               <MapView points={points} height={240} popups={false} />
             </div>
           ) : (
-            <div className="panel text-sm text-ink-soft">This report has no map pin.</div>
+            <div className="panel text-sm text-ink-soft">{t("detail.noPin")}</div>
           )}
         </aside>
       </div>

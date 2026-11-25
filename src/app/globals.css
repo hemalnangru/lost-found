@@ -17,8 +17,8 @@
   --color-found-tint: #dff3ea;
   --color-line: #d7deec;
   --color-line-strong: #aab6d3;
-  --font-display: var(--font-archivo), "Arial Narrow", system-ui, sans-serif;
-  --font-sans: var(--font-figtree), system-ui, sans-serif;
+  --font-display: var(--font-archivo), var(--font-deva), "Arial Narrow", system-ui, sans-serif;
+  --font-sans: var(--font-figtree), var(--font-deva), system-ui, sans-serif;
 }
 
 :root {
@@ -32,7 +32,7 @@ body {
 }
 
 body {
-  font-family: var(--font-figtree), system-ui, sans-serif;
+  font-family: var(--font-figtree), var(--font-deva), system-ui, sans-serif;
   line-height: 1.55;
 }
 
@@ -40,7 +40,7 @@ body {
   h1,
   h2,
   h3 {
-    font-family: var(--font-archivo), "Arial Narrow", system-ui, sans-serif;
+    font-family: var(--font-archivo), var(--font-deva), "Arial Narrow", system-ui, sans-serif;
     letter-spacing: -0.01em;
   }
   :focus-visible {
@@ -211,6 +211,11 @@ body {
     color: #fff;
   }
 
+  .segmented-sm button {
+    padding: 0.25rem 0.7rem;
+    font-size: 0.85rem;
+  }
+
   .score {
     flex-shrink: 0;
     display: grid;
@@ -227,7 +232,7 @@ body {
     height: calc(100% - 12px);
     border-radius: 50%;
     background: var(--color-card);
-    font-family: var(--font-archivo), system-ui, sans-serif;
+    font-family: var(--font-archivo), var(--font-deva), system-ui, sans-serif;
     font-weight: 800;
     font-size: 0.95rem;
   }
@@ -238,7 +243,7 @@ body {
     border-radius: 999px;
     background: var(--color-signal);
     color: var(--color-ink);
-    font-family: var(--font-archivo), system-ui, sans-serif;
+    font-family: var(--font-archivo), var(--font-deva), system-ui, sans-serif;
     font-weight: 800;
     transform: rotate(-6deg);
     box-shadow: 3px 3px 0 var(--color-ink);

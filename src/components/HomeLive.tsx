@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { formatDate } from "@/lib/format";
+import { useT } from "@/lib/i18n";
 import TicketBand from "@/components/TicketBand";
 
 type Recent = {
@@ -18,13 +19,14 @@ type Recent = {
 type Stats = { total: number; lost: number; found: number; returned: number };
 
 export default function HomeLive() {
+  const { t, lang } = useT();
   const [stats, setStats] = useState<Stats | null>(null);
   const [recent, setRecent] = useState<Recent[]>([]);
 
   useEffect(() => {
     async function load() {
       const count = () => supabase.from("items").select("id", { count: "exact", head: true });
-      const [t, l, f, r, rec] = await Promise.all([
+      const [tot, l, f, r, rec] = await Promise.all([
         count(),
         count().eq("type", "lost"),
         count().eq("type", "found"),
@@ -37,7 +39,7 @@ export default function HomeLive() {
           .limit(3),
       ]);
       setStats({
-        total: t.count ?? 0,
+        total: tot.count ?? 0,
         lost: l.count ?? 0,
         found: f.count ?? 0,
         returned: r.count ?? 0,
@@ -48,10 +50,10 @@ export default function HomeLive() {
   }, []);
 
   const cells: [string, number | undefined][] = [
-    ["Reports", stats?.total],
-    ["Lost", stats?.lost],
-    ["Found", stats?.found],
-    ["Returned", stats?.returned],
+    [t("live.reports"), stats?.total],
+    [t("common.lost"), stats?.lost],
+    [t("common.found"), stats?.found],
+    [t("live.returned"), stats?.returned],
   ];
 
   return (
@@ -68,9 +70,9 @@ export default function HomeLive() {
       {recent.length > 0 && (
         <div className="mt-10">
           <div className="flex items-end justify-between gap-4 mb-4">
-            <h2 className="font-display font-extrabold text-2xl">Recently found</h2>
+            <h2 className="font-display font-extrabold text-2xl">{t("live.recent")}</h2>
             <Link href="/items" className="text-rail-dark underline font-semibold">
-              Browse all reports
+              {t("live.browseAll")}
             </Link>
           </div>
           <div className="grid gap-5 sm:grid-cols-3">
@@ -87,7 +89,7 @@ export default function HomeLive() {
                     <p className="text-sm text-ink-soft mt-1 line-clamp-2">{it.description}</p>
                   )}
                   <p className="text-xs text-ink-soft mt-3">
-                    {it.city ?? "Unknown city"}, {formatDate(it.event_date)}
+                    {it.city ?? t("common.unknownCity")}, {formatDate(it.event_date, lang)}
                   </p>
                 </div>
               </article>

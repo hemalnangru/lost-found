@@ -4,12 +4,14 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { supabase } from "@/lib/supabase";
 import { formatDate } from "@/lib/format";
+import { useT } from "@/lib/i18n";
 import TicketBand from "@/components/TicketBand";
+import MapLoading from "@/components/MapLoading";
 import type { MapPoint } from "@/components/MapView";
 
 const MapView = dynamic(() => import("@/components/MapView"), {
   ssr: false,
-  loading: () => <p className="p-4 text-sm text-ink-soft">Loading map...</p>,
+  loading: () => <MapLoading />,
 });
 
 type Item = {
@@ -29,6 +31,7 @@ type Item = {
 const CATEGORIES = ["phone", "wallet", "bag", "keys", "documents", "laptop", "other"];
 
 export default function ItemsPage() {
+  const { t, td, lang } = useT();
   const [items, setItems] = useState<Item[]>([]);
   const [type, setType] = useState("all");
   const [category, setCategory] = useState("all");
@@ -68,29 +71,35 @@ export default function ItemsPage() {
     [items]
   );
 
+  const typeOptions: [string, string][] = [
+    ["all", t("common.all")],
+    ["lost", t("common.lost")],
+    ["found", t("common.found")],
+  ];
+  const viewOptions: [string, string][] = [
+    ["list", t("items.list")],
+    ["map", t("items.map")],
+  ];
+
   return (
     <main className="max-w-6xl mx-auto px-5 py-8">
       <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
         <div>
-          <h1 className="font-display font-extrabold text-3xl">Browse reports</h1>
+          <h1 className="font-display font-extrabold text-3xl">{t("items.title")}</h1>
           <p className="text-ink-soft">
             {loading
-              ? "Loading reports..."
-              : `${items.length} report${items.length === 1 ? "" : "s"} shown`}
+              ? t("items.loading")
+              : t(items.length === 1 ? "items.shownOne" : "items.shownMany", { n: items.length })}
           </p>
         </div>
         <Link href="/report" className="btn btn-primary">
-          Report an item
+          {t("common.reportItem")}
         </Link>
       </div>
 
       <div className="panel flex flex-wrap items-center gap-3 mb-6">
-        <div className="segmented" role="group" aria-label="Report type">
-          {[
-            ["all", "All"],
-            ["lost", "Lost"],
-            ["found", "Found"],
-          ].map(([v, l]) => (
+        <div className="segmented" role="group" aria-label={t("items.typeAria")}>
+          {typeOptions.map(([v, l]) => (
             <button key={v} type="button" aria-pressed={type === v} onClick={() => setType(v)}>
               {l}
             </button>
@@ -98,27 +107,26 @@ export default function ItemsPage() {
         </div>
         <select
           className="field"
-          aria-label="Category"
+          aria-label={t("items.categoryAria")}
           value={category}
           onChange={(e) => setCategory(e.target.value)}
         >
-          <option value="all">All categories</option>
+          <option value="all">{t("items.allCategories")}</option>
           {CATEGORIES.map((c) => (
-            <option key={c}>{c}</option>
+            <option key={c} value={c}>
+              {td(`cat.${c}`, c)}
+            </option>
           ))}
         </select>
         <input
           className="field"
-          aria-label="City"
-          placeholder="Search city, e.g. Jalandhar"
+          aria-label={t("items.cityAria")}
+          placeholder={t("items.cityPh")}
           value={city}
           onChange={(e) => setCity(e.target.value)}
         />
-        <div className="segmented sm:ml-auto" role="group" aria-label="View">
-          {[
-            ["list", "List"],
-            ["map", "Map"],
-          ].map(([v, l]) => (
+        <div className="segmented sm:ml-auto" role="group" aria-label={t("items.viewAria")}>
+          {viewOptions.map(([v, l]) => (
             <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)}>
               {l}
             </button>
@@ -128,11 +136,11 @@ export default function ItemsPage() {
 
       {!loading && items.length === 0 && (
         <div className="panel">
-          <p className="font-semibold">No reports match these filters.</p>
+          <p className="font-semibold">{t("items.emptyTitle")}</p>
           <p className="text-ink-soft">
-            Clear a filter, or{" "}
+            {t("items.emptyText")}
             <Link href="/report" className="text-rail-dark underline">
-              report the item yourself
+              {t("items.emptyLink")}
             </Link>
             .
           </p>
@@ -146,9 +154,9 @@ export default function ItemsPage() {
           </div>
           <p className="mt-2 text-sm text-ink-soft">
             <span className="inline-block h-3 w-3 rounded-full bg-lost border border-ink align-middle" />{" "}
-            Lost{" "}
+            {t("common.lost")}{" "}
             <span className="ml-3 inline-block h-3 w-3 rounded-full bg-found border border-ink align-middle" />{" "}
-            Found. {points.length} of {items.length} reports have a map pin.
+            {t("common.found")}. {t("items.pins", { pins: points.length, total: items.length })}
           </p>
         </div>
       )}
@@ -167,7 +175,7 @@ export default function ItemsPage() {
                 />
               ) : (
                 <div className="h-24 grid place-items-center bg-paper text-sm text-ink-soft border-b-[1.5px] border-ink">
-                  No photo added
+                  {t("common.noPhoto")}
                 </div>
               )}
               <div className="p-4 flex-1">
@@ -179,15 +187,15 @@ export default function ItemsPage() {
                 {it.description && (
                   <p className="text-sm text-ink-soft mt-1 line-clamp-2">{it.description}</p>
                 )}
-                <span className="chip mt-3">{it.category}</span>
+                <span className="chip mt-3">{td(`cat.${it.category}`, it.category)}</span>
               </div>
               <div className="ticket-perf mx-4" />
               <div className="px-4 py-3 flex items-center justify-between gap-2 text-sm">
                 <span className="text-ink-soft">
-                  {it.city ?? "Unknown city"}, {formatDate(it.event_date)}
+                  {it.city ?? t("common.unknownCity")}, {formatDate(it.event_date, lang)}
                 </span>
                 <span className={`chip ${it.type === "lost" ? "chip-lost" : "chip-found"}`}>
-                  {it.status}
+                  {td(`status.${it.status}`, it.status)}
                 </span>
               </div>
             </article>

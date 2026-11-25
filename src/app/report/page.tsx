@@ -4,11 +4,13 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { supabase } from "@/lib/supabase";
 import { formatDate } from "@/lib/format";
+import { reasonText, useT } from "@/lib/i18n";
 import TicketBand from "@/components/TicketBand";
+import MapLoading from "@/components/MapLoading";
 
 const MapPicker = dynamic(() => import("@/components/MapPicker"), {
   ssr: false,
-  loading: () => <p className="p-4 text-sm text-ink-soft">Loading map...</p>,
+  loading: () => <MapLoading />,
 });
 
 type Match = {
@@ -25,6 +27,7 @@ type Match = {
 const CATEGORIES = ["phone", "wallet", "bag", "keys", "documents", "laptop", "other"];
 
 export default function ReportPage() {
+  const { t, td, lang } = useT();
   const [email, setEmail] = useState<string | null>(null);
   const [checking, setChecking] = useState(true);
   const [form, setForm] = useState({
@@ -52,8 +55,8 @@ export default function ReportPage() {
   }, []);
 
   useEffect(() => {
-    const t = new URLSearchParams(window.location.search).get("type");
-    if (t === "found") {
+    const q = new URLSearchParams(window.location.search).get("type");
+    if (q === "found") {
       Promise.resolve().then(() => setForm((f) => ({ ...f, type: "found" })));
     }
   }, []);
@@ -66,25 +69,17 @@ export default function ReportPage() {
   const setSec = (k: string, v: string) => setSecret({ ...secret, [k]: v });
 
   function useMyLocation() {
-    if (!navigator.geolocation) {
-      return setError("Your browser doesn't support location. Click the map instead.");
-    }
+    if (!navigator.geolocation) return setError(t("report.errNoLoc"));
     navigator.geolocation.getCurrentPosition(
       (pos) => setPin({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => setError("Couldn't get your location. Click the map instead.")
+      () => setError(t("report.errLoc"))
     );
   }
 
   function pickFile(f: File | null) {
     setError("");
-    if (f && !f.type.startsWith("image/")) {
-      setError("Choose an image file.");
-      return;
-    }
-    if (f && f.size > 5 * 1024 * 1024) {
-      setError("The image must be under 5 MB.");
-      return;
-    }
+    if (f && !f.type.startsWith("image/")) return setError(t("report.errImage"));
+    if (f && f.size > 5 * 1024 * 1024) return setError(t("report.errSize"));
     setFile(f);
   }
 
@@ -98,22 +93,19 @@ export default function ReportPage() {
     const token = sessionData.session?.access_token;
     if (!token) {
       setLoading(false);
-      return setError("Log in first.");
+      return setError(t("report.errLogin"));
     }
 
     let image_url: string | null = null;
     if (file) {
       const ext = file.name.split(".").pop() ?? "jpg";
       const path = `${crypto.randomUUID()}.${ext}`;
-      const { error: upErr } = await supabase.storage
-        .from("item-images")
-        .upload(path, file);
+      const { error: upErr } = await supabase.storage.from("item-images").upload(path, file);
       if (upErr) {
         setLoading(false);
-        return setError("Image upload failed: " + upErr.message);
+        return setError(t("report.errUpload", { msg: upErr.message }));
       }
-      image_url = supabase.storage.from("item-images").getPublicUrl(path)
-        .data.publicUrl;
+      image_url = supabase.storage.from("item-images").getPublicUrl(path).data.publicUrl;
     }
 
     const res = await fetch("/api/report", {
@@ -132,7 +124,7 @@ export default function ReportPage() {
     const data = await res.json();
     if (!res.ok) {
       setLoading(false);
-      return setError(data.error ?? "Something went wrong. Try again.");
+      return setError(data.error ?? t("report.errGeneric"));
     }
 
     if (form.type === "found") {
@@ -144,7 +136,7 @@ export default function ReportPage() {
       });
       if (secErr) {
         setLoading(false);
-        return setError("Couldn't save the verification details: " + secErr.message);
+        return setError(t("report.errSecret", { msg: secErr.message }));
       }
     }
 
@@ -155,15 +147,15 @@ export default function ReportPage() {
 
   const isFound = form.type === "found";
 
-  if (checking) return <main className="max-w-3xl mx-auto px-5 py-8">Loading...</main>;
+  if (checking) return <main className="max-w-3xl mx-auto px-5 py-8">{t("common.loading")}</main>;
 
   if (!email) {
     return (
       <main className="max-w-3xl mx-auto px-5 py-8">
-        <h1 className="font-display font-extrabold text-3xl mb-2">Report an item</h1>
-        <p className="mb-4 text-ink-soft">Log in to report a lost or found item.</p>
+        <h1 className="font-display font-extrabold text-3xl mb-2">{t("report.title")}</h1>
+        <p className="mb-4 text-ink-soft">{t("report.loginPrompt")}</p>
         <Link href="/login" className="btn btn-primary">
-          Log in
+          {t("nav.login")}
         </Link>
       </main>
     );
@@ -171,71 +163,71 @@ export default function ReportPage() {
 
   return (
     <main className="max-w-3xl mx-auto px-5 py-8">
-      <h1 className="font-display font-extrabold text-3xl">Report an item</h1>
-      <p className="text-ink-soft mt-1 mb-6">The more detail you add, the better the matches.</p>
+      <h1 className="font-display font-extrabold text-3xl">{t("report.title")}</h1>
+      <p className="text-ink-soft mt-1 mb-6">{t("report.sub")}</p>
 
       <form onSubmit={submit} className="space-y-6">
-        <div className="segmented w-full sm:w-auto" role="group" aria-label="Report type">
+        <div className="segmented w-full sm:w-auto" role="group" aria-label={t("report.typeAria")}>
           <button type="button" aria-pressed={!isFound} onClick={() => set("type", "lost")}>
-            I lost something
+            {t("report.iLost")}
           </button>
           <button type="button" aria-pressed={isFound} onClick={() => set("type", "found")}>
-            I found something
+            {t("report.iFound")}
           </button>
         </div>
 
         <section className="panel space-y-4">
-          <h2 className="font-display font-bold text-xl">About the item</h2>
+          <h2 className="font-display font-bold text-xl">{t("report.about")}</h2>
           <div>
-            <label className="label" htmlFor="title">Title</label>
-            <input id="title" className="field w-full" required placeholder="Black Samsung phone"
+            <label className="label" htmlFor="title">{t("report.fTitle")}</label>
+            <input id="title" className="field w-full" required placeholder={t("report.titlePh")}
               value={form.title} onChange={(e) => set("title", e.target.value)} />
           </div>
           <div>
-            <label className="label" htmlFor="description">Description</label>
+            <label className="label" htmlFor="description">{t("report.fDesc")}</label>
             <textarea id="description" className="field w-full" rows={3}
-              placeholder="Cracked screen, dog wallpaper, blue case"
+              placeholder={t("report.descPh")}
               value={form.description} onChange={(e) => set("description", e.target.value)} />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="label" htmlFor="category">Category</label>
+              <label className="label" htmlFor="category">{t("report.fCategory")}</label>
               <select id="category" className="field w-full" value={form.category}
                 onChange={(e) => set("category", e.target.value)}>
                 {CATEGORIES.map((c) => (
-                  <option key={c}>{c}</option>
+                  <option key={c} value={c}>{td(`cat.${c}`, c)}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="label" htmlFor="color">Colour</label>
-              <input id="color" className="field w-full" placeholder="Black" value={form.color}
-                onChange={(e) => set("color", e.target.value)} />
+              <label className="label" htmlFor="color">{t("report.fColour")}</label>
+              <input id="color" className="field w-full" placeholder={t("report.colourPh")}
+                value={form.color} onChange={(e) => set("color", e.target.value)} />
             </div>
           </div>
         </section>
 
         <section className="panel space-y-4">
           <h2 className="font-display font-bold text-xl">
-            Where and when {isFound ? "you found it" : "you lost it"}
+            {isFound ? t("report.whereFound") : t("report.whereLost")}
           </h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="label" htmlFor="city">City</label>
-              <input id="city" className="field w-full" placeholder="Jalandhar" value={form.city}
-                onChange={(e) => set("city", e.target.value)} />
+              <label className="label" htmlFor="city">{t("report.fCity")}</label>
+              <input id="city" className="field w-full" placeholder={t("report.cityPh")}
+                value={form.city} onChange={(e) => set("city", e.target.value)} />
             </div>
             <div>
-              <label className="label" htmlFor="date">Date</label>
+              <label className="label" htmlFor="date">{t("report.fDate")}</label>
               <input id="date" className="field w-full" type="date" required value={form.event_date}
                 onChange={(e) => set("event_date", e.target.value)} />
             </div>
           </div>
           <div>
             <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-              <span className="label mb-0">Pin the spot on the map (optional)</span>
+              <span className="label mb-0">{t("report.pinLabel")}</span>
               <button type="button" onClick={useMyLocation} className="btn btn-small">
-                Use my location
+                {t("report.useLocation")}
               </button>
             </div>
             <div className="isolate overflow-hidden rounded-xl border-[1.5px] border-ink">
@@ -247,21 +239,21 @@ export default function ReportPage() {
             </div>
             <p className="mt-2 text-sm text-ink-soft">
               {pin
-                ? `Pin saved at ${pin.lat.toFixed(4)}, ${pin.lng.toFixed(4)}. Matches will show the distance.`
-                : "Click the map to drop a pin. Matches will show the distance."}
+                ? t("report.pinSaved", { lat: pin.lat.toFixed(4), lng: pin.lng.toFixed(4) })
+                : t("report.pinHint")}
             </p>
           </div>
         </section>
 
         <section className="panel space-y-3">
-          <h2 className="font-display font-bold text-xl">Photo</h2>
-          <input type="file" accept="image/*" aria-label="Photo, optional, max 5 MB"
+          <h2 className="font-display font-bold text-xl">{t("report.photo")}</h2>
+          <input type="file" accept="image/*" aria-label={t("report.photoAria")}
             className="field w-full"
             onChange={(e) => pickFile(e.target.files?.[0] ?? null)} />
-          <p className="text-sm text-ink-soft">Optional. Up to 5 MB.</p>
+          <p className="text-sm text-ink-soft">{t("report.photoHint")}</p>
           {file && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={URL.createObjectURL(file)} alt="Preview of the chosen photo"
+            <img src={URL.createObjectURL(file)} alt={t("report.photoPreview")}
               className="h-36 rounded-lg object-cover border-[1.5px] border-ink" />
           )}
         </section>
@@ -269,27 +261,23 @@ export default function ReportPage() {
         {isFound && (
           <section className="panel space-y-4 bg-[#fff6cc]">
             <div>
-              <h2 className="font-display font-bold text-xl">Verification question</h2>
-              <p className="text-sm text-ink-soft">
-                Only the real owner should know the answer. They must answer it before they
-                see your contact details.
-              </p>
+              <h2 className="font-display font-bold text-xl">{t("report.verifyTitle")}</h2>
+              <p className="text-sm text-ink-soft">{t("report.verifyHelp")}</p>
             </div>
             <div>
-              <label className="label" htmlFor="q">Question</label>
-              <input id="q" className="field w-full" required
-                placeholder="What is the phone wallpaper?"
+              <label className="label" htmlFor="q">{t("report.fQuestion")}</label>
+              <input id="q" className="field w-full" required placeholder={t("report.qPh")}
                 value={secret.question} onChange={(e) => setSec("question", e.target.value)} />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="label" htmlFor="a">Correct answer</label>
-                <input id="a" className="field w-full" required placeholder="Dog"
+                <label className="label" htmlFor="a">{t("report.fAnswer")}</label>
+                <input id="a" className="field w-full" required placeholder={t("report.aPh")}
                   value={secret.answer} onChange={(e) => setSec("answer", e.target.value)} />
               </div>
               <div>
-                <label className="label" htmlFor="c">Your contact</label>
-                <input id="c" className="field w-full" required placeholder="Phone or email"
+                <label className="label" htmlFor="c">{t("report.fContact")}</label>
+                <input id="c" className="field w-full" required placeholder={t("report.cPh")}
                   value={secret.contact} onChange={(e) => setSec("contact", e.target.value)} />
               </div>
             </div>
@@ -297,7 +285,7 @@ export default function ReportPage() {
         )}
 
         <button disabled={loading} className="btn btn-primary w-full sm:w-auto">
-          {loading ? "Finding matches..." : "Save and find matches"}
+          {loading ? t("report.submitting") : t("report.submit")}
         </button>
       </form>
 
@@ -309,18 +297,13 @@ export default function ReportPage() {
 
       {matches && (
         <section ref={resultsRef} className="mt-10 scroll-mt-24">
-          <h2 className="font-display font-extrabold text-2xl">Possible matches</h2>
-          <p className="text-ink-soft mb-4">
-            Ranked by description, distance and date. Each card says why it matched.
-          </p>
+          <h2 className="font-display font-extrabold text-2xl">{t("report.matches")}</h2>
+          <p className="text-ink-soft mb-4">{t("report.matchesSub")}</p>
 
           {matches.length === 0 ? (
             <div className="panel">
-              <p className="font-semibold">No matches yet.</p>
-              <p className="text-ink-soft">
-                Your report is saved. Anyone who reports a similar item will be able to find
-                it.
-              </p>
+              <p className="font-semibold">{t("report.noMatches")}</p>
+              <p className="text-ink-soft">{t("report.noMatchesText")}</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -331,7 +314,7 @@ export default function ReportPage() {
                     <TicketBand type={resultType === "lost" ? "found" : "lost"} id={m.id} />
                     <div className="flex gap-4 p-4">
                       <div className="score" style={{ "--p": pct } as React.CSSProperties}
-                        role="img" aria-label={`${pct}% match`}>
+                        role="img" aria-label={t("report.matchAria", { pct })}>
                         <span>{pct}%</span>
                       </div>
                       {m.image_url && (
@@ -345,7 +328,7 @@ export default function ReportPage() {
                           <p className="text-sm text-ink-soft">{m.description}</p>
                         )}
                         <p className="mt-1 text-xs text-ink-soft">
-                          {m.city ?? "Unknown city"}, {formatDate(m.event_date)}
+                          {m.city ?? t("common.unknownCity")}, {formatDate(m.event_date, lang)}
                         </p>
                       </div>
                     </div>
@@ -353,9 +336,9 @@ export default function ReportPage() {
                       <>
                         <div className="ticket-perf mx-4" />
                         <div className="flex flex-wrap items-center gap-2 px-4 py-3">
-                          <span className="mr-1 text-sm font-semibold">Why it matched</span>
+                          <span className="mr-1 text-sm font-semibold">{t("report.why")}</span>
                           {m.reasons.map((r) => (
-                            <span key={r} className="chip">{r}</span>
+                            <span key={r} className="chip">{reasonText(r, t)}</span>
                           ))}
                         </div>
                       </>
@@ -363,7 +346,7 @@ export default function ReportPage() {
                     {resultType === "lost" && (
                       <div className="px-4 pb-4">
                         <Link href={`/claim/${m.id}`} className="btn btn-primary btn-small">
-                          Claim this item
+                          {t("detail.claim")}
                         </Link>
                       </div>
                     )}
